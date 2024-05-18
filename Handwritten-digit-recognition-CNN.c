@@ -1,5 +1,5 @@
 /*****************************************************************************
-File name: CNN_Improved
+File name: Handwritten-digit-recognition
 Description: CNN手写数字识别
 Author: 贾继伟
 Version: 1.1
@@ -14,54 +14,63 @@ Date: 1999年13月32日
 #define max(a,b)(((a)>(b))?(a):(b))
 #define SAMPLE_NUM 30//宏定义的样本数量
 double lr;
-double result[10];//最后通过softmax输出的结果
+double result[11];//最后通过softmax输出的结果
 
-// 定义卷积核和全连接层的参数
+/* 定义卷积核和全连接层的参数
+ * 3x3的卷积核，两个通道，每个通道有三个卷积层
+ * 三个全连接层，
+ *  输入维度分别为1152、180、45，
+ *  输出维度分别为180、45、10
+ */ 
 struct parameter{
-    double conv_kernel11[3][3];
-    double conv_kernel12[3][3];
-    double conv_kernel21[3][3];
-    double conv_kernel22[3][3];
-    double conv_kernel31[3][3];
-    double conv_kernel32[3][3];
-    double fc_hidden_layer1[1152][180];
-    double fc_hidden_layer2[180][45];
-    double fc_hidden_layer3[45][10];
+    double conv_kernel11[3][3]; // 第一个通道的第一个卷积核
+    double conv_kernel12[3][3]; // 第一个通道的第二个卷积核
+    double conv_kernel21[3][3]; // 第二个通道的第一个卷积核
+    double conv_kernel22[3][3]; // 第二个通道的第二个卷积核
+    double conv_kernel31[3][3]; // 第三个通道的第一个卷积核
+    double conv_kernel32[3][3]; // 第三个通道的第二个卷积核
+    double fc_hidden_layer1[1152][180]; // 第一个全连接层，输入维度为1152，输出维度为180
+    double fc_hidden_layer2[180][45];   // 第二个全连接层,输入维度为180，输出维度为45
+    double fc_hidden_layer3[45][10];    // 第三个全连接层，输入维度为45，输出维度为10
 };
 
-// 存储从输入到输出的所有中间结果和最终结果
-//网络中每一层的尺寸
+/* 存储卷积神经网络（CNN）在前向传播过程中的中间结果和最终结果
+ * 存储从输入到输出的所有中间结果和最终结果
+ * 网络中每一层的尺寸
+ */ 
 struct result{
-    double mnist_data[30][30];
+    double mnist_data[30][30]; // 输入数据
     //通道一
-    double first_conv1[28][28];
-    double sencond_conv1[26][26];
-    double third_conv1[24][24];
+    double first_conv1[28][28];   // 第一层卷积层的输出
+    double sencond_conv1[26][26]; // 第二层卷积层的输出
+    double third_conv1[24][24];   // 第三层卷积层的输出
     //通道二
-    double first_conv2[28][28];
-    double sencond_conv2[26][26];
-    double third_conv2[24][24];
+    double first_conv2[28][28];   // 第一层卷积层的输出
+    double sencond_conv2[26][26]; // 第二层卷积层的输出
+    double third_conv2[24][24];   // 第三层卷积层的输出
     //全连接
-    double flatten_conv[1][1152];
-    double first_fc[1][180];
-    double first_relu[1][180];
-    double second_fc[1][45];
-    double second_relu[1][45];
-    double outmlp[1][10];//全连接的输出
-    double result[10];//Softmax的输出
+    double flatten_conv[1][1152]; // 扁平化后的特征图
+    double first_fc[1][180];      // 第一个全连接层的输出
+    double first_relu[1][180];    // 第一个全连接层的激活函数输出
+    double second_fc[1][45];      // 第二个全连接层的输出
+    double second_relu[1][45];    // 第二个全连接层的激活函数输出
+    double outmlp[1][10];         // 全连接的输出
+    double result[10];            // Softmax的输出
 };
 
-// 用于存储训练集的结构体
-//训练集结构体，训练样本30*30
+/* 用于存储训练集的结构体
+ * 训练集结构体，训练样本30*30
+ */
 struct input{
     double a[10][SAMPLE_NUM][30][30];//[标签][样本数量][w][h]
 };
 
-// 保存每张图片的数据和标签
-//保存每一张图片的结构体
+/* 保存每张图片的数据和标签
+ * 保存每一张图片的结构体
+ */
 struct sample{
-    double a[30][30];//data
-    int number;//label
+    double a[30][30]; //data
+    int number;       //label
 }Sample[SAMPLE_NUM*10];
 
 //以下函数的实现保持不变，因为它们是独立于平台的：
@@ -139,7 +148,10 @@ void MatrixBackPropagationMultiply(int w,int h,double *para,double *grad,double 
 
 }
 
-//计算当前层的参数矩阵的梯度,利用前一层神经元梯度行矩阵乘本层神经元梯度列矩阵,得到本层参数梯度
+/* 计算当前层的参数矩阵的梯度,
+ * 利用前一层神经元梯度行矩阵乘本层神经元梯度列矩阵,
+ * 得到本层参数梯度
+ */ 
 void CalculateMatrixGrad(int w,int h,double *input_matrix,double *grad,double *output_matrix){
     for(int i=0;i<w;i++){
         output_matrix[i]=0;//梯度清空，方便累加
@@ -149,14 +161,18 @@ void CalculateMatrixGrad(int w,int h,double *input_matrix,double *grad,double *o
     }
 }
 
-//激活函数的反向传播
+/* 
+ * 激活函数的反向传播
+ */
 void ReluBackPropagation(int w,double *input_matrix,double *grad,double *output_matrix){
     for(int i=0;i<w;i++)
         if(input_matrix[i]>0) output_matrix[i]=1*grad[i];
         else output_matrix[i]=0.05*grad[i];
 }
 
-//反向传播时对梯度进行填充，由w*h变为(w+2*stride)*(h+2*stride)
+/* 反向传播时对梯度进行填充，
+ * 由w*h变为(w+2*stride)*(h+2*stride)
+ */
 void Padding(int w,int stride,double *input_matrix,double *output_matrix){
     for(int i=0;i<w+2*stride;i++)
         for(int j=0;j<w+2*stride;j++)
@@ -166,7 +182,9 @@ void Padding(int w,int stride,double *input_matrix,double *output_matrix){
 //            output_matrix[(i+stride)*(w+2*stride)+(j+stride)]=input_matrix[i*w+j];
 }
 
-//由于卷积核翻转180°后恰好是导数形式，故进行翻转后与后向传播过来的梯度相乘
+/* 
+ * 由于卷积核翻转180°后恰好是导数形式，故进行翻转后与后向传播过来的梯度相乘
+ */
 void OverturnKernel(int k,double *input_matrix,double *output_matrix){
     for(int i=0;i<k;i++)
         for(int j=0;j<k;j++)

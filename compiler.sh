@@ -1,2 +1,2 @@
 #!/bin/sh
-gcc CNN_Improved.c -lm -o CNN_Improved.bin
+gcc Handwritten-digit-recognition-CNN.c -lm -o Handwritten-digit-recognition-CNN
