@@ -12,68 +12,48 @@ Date: 1999年13月32日
 #include <time.h>
 #include <unistd.h>  
 #define max(a,b)(((a)>(b))?(a):(b))
-#define SAMPLE_NUM 30//宏定义的样本数量
+#define SAMPLE_NUM 30
 double lr;
-double result[11];//最后通过softmax输出的结果
+double result[11];
 
-/* 定义卷积核和全连接层的参数
- * 3x3的卷积核，两个通道，每个通道有三个卷积层
- * 三个全连接层，
- *  输入维度分别为1152、180、45，
- *  输出维度分别为180、45、10
- */ 
 struct parameter{
-    double conv_kernel11[3][3]; // 第一个通道的第一个卷积核
-    double conv_kernel12[3][3]; // 第一个通道的第二个卷积核
-    double conv_kernel21[3][3]; // 第二个通道的第一个卷积核
-    double conv_kernel22[3][3]; // 第二个通道的第二个卷积核
-    double conv_kernel31[3][3]; // 第三个通道的第一个卷积核
-    double conv_kernel32[3][3]; // 第三个通道的第二个卷积核
-    double fc_hidden_layer1[1152][180]; // 第一个全连接层，输入维度为1152，输出维度为180
-    double fc_hidden_layer2[180][45];   // 第二个全连接层,输入维度为180，输出维度为45
-    double fc_hidden_layer3[45][10];    // 第三个全连接层，输入维度为45，输出维度为10
+    double conv_kernel11[3][3]; 
+    double conv_kernel12[3][3]; 
+    double conv_kernel21[3][3]; 
+    double conv_kernel22[3][3]; 
+    double conv_kernel31[3][3]; 
+    double conv_kernel32[3][3]; 
+    double fc_hidden_layer1[1152][180]; 
+    double fc_hidden_layer2[180][45];   
+    double fc_hidden_layer3[45][10];    
 };
 
-/* 存储卷积神经网络（CNN）在前向传播过程中的中间结果和最终结果
- * 存储从输入到输出的所有中间结果和最终结果
- * 网络中每一层的尺寸
- */ 
 struct result{
-    double mnist_data[30][30]; // 输入数据
-    //通道一
-    double first_conv1[28][28];   // 第一层卷积层的输出
-    double sencond_conv1[26][26]; // 第二层卷积层的输出
-    double third_conv1[24][24];   // 第三层卷积层的输出
-    //通道二
-    double first_conv2[28][28];   // 第一层卷积层的输出
-    double sencond_conv2[26][26]; // 第二层卷积层的输出
-    double third_conv2[24][24];   // 第三层卷积层的输出
-    //全连接
-    double flatten_conv[1][1152]; // 扁平化后的特征图
-    double first_fc[1][180];      // 第一个全连接层的输出
-    double first_relu[1][180];    // 第一个全连接层的激活函数输出
-    double second_fc[1][45];      // 第二个全连接层的输出
-    double second_relu[1][45];    // 第二个全连接层的激活函数输出
-    double outmlp[1][10];         // 全连接的输出
-    double result[10];            // Softmax的输出
+    double mnist_data[30][30]; 
+    double first_conv1[28][28];   
+    double sencond_conv1[26][26]; 
+    double third_conv1[24][24];   
+    double first_conv2[28][28];   
+    double sencond_conv2[26][26]; 
+    double third_conv2[24][24];   
+    double flatten_conv[1][1152]; 
+    double first_fc[1][180];      
+    double first_relu[1][180];    
+    double second_fc[1][45];     
+    double second_relu[1][45];   
+    double outmlp[1][10];        
+    double result[10];           
 };
 
-/* 用于存储训练集的结构体
- * 训练集结构体，训练样本30*30
- */
 struct input{
-    double a[10][SAMPLE_NUM][30][30];//[标签][样本数量][w][h]
+    double a[10][SAMPLE_NUM][30][30];
 };
 
-/* 保存每张图片的数据和标签
- * 保存每一张图片的结构体
- */
 struct sample{
-    double a[30][30]; //data
-    int number;       //label
+    double a[30][30]; 
+    int number;       
 }Sample[SAMPLE_NUM*10];
 
-//以下函数的实现保持不变，因为它们是独立于平台的：
 void Conv2d(int w,int h,int k,double *input_matrix,double *kernel,double *out_matrix){
     for(int i=0;i<w-k+1;i++)
         for(int j=0;j<h-k+1;j++){
@@ -83,7 +63,7 @@ void Conv2d(int w,int h,int k,double *input_matrix,double *kernel,double *out_ma
                     out_matrix[i*(w-k+1)+j]+=input_matrix[row*w+col]*kernel[(row-i)*k+(col-j)];
         }
 }
-//最大池化操作，池化核大小为k*k
+
 void MaxPool2d(int w,int h,int k,double *input_matrix,double *output_matrix){
     for(int i=0;i<w/k;i++)
         for(int j=0;j<h/k;j++){
@@ -96,25 +76,22 @@ void MaxPool2d(int w,int h,int k,double *input_matrix,double *output_matrix){
         }
 }
 
-//用LeakyRelu代替Relu，避免梯度弥散
 void Relu(int w,int h,double *input_matrix,double *output_matrix){
     for(int i=0;i<w;i++)
         for(int j=0;j<h;j++)
             output_matrix[i*w+j]=max(input_matrix[i*w+j],input_matrix[i*w+j]*0.05);
 }
 
-//特征图扁平化后concat
 void MatrixExtensionImproved(int w,int h,double *input_matrix1,double *input_matrix2,double *output_matrix){
     for(int i=0;i<w;i++)
         for(int j=0;j<h;j++)
-            output_matrix[i*w+j]=input_matrix1[i*w+j];//将通道一的特征图输出加入到output_matrix
+            output_matrix[i*w+j]=input_matrix1[i*w+j];
 
     for(int i=0;i<w;i++)
         for(int j=0;j<h;j++)
-            output_matrix[w*h+i*w+j]=input_matrix2[i*w+j];//将通道二的特征图输出加入到output_matrix
+            output_matrix[w*h+i*w+j]=input_matrix2[i*w+j];
 }
 
-//全连接的矩阵乘法
 void MatrixMultiply(int w,int h,int out_deminsion,double *input_matrix,double *para_layer,double*output_matrix){
     for(int i=0;i<w;i++)
         for(int j=0;j<out_deminsion;j++){
@@ -124,7 +101,6 @@ void MatrixMultiply(int w,int h,int out_deminsion,double *input_matrix,double *p
         }
 }
 
-//将全连接反向传播过来的梯度拆成两部分输入到两个channel中
 void MatrixSplit(double *input_matrix,double *splited_matrix1,double *splited_matrix2){
     for(int idx=0;idx<1152;idx++)
         if(idx<576)
@@ -133,14 +109,12 @@ void MatrixSplit(double *input_matrix,double *splited_matrix1,double *splited_ma
             splited_matrix2[idx-576]=input_matrix[idx];
 }
 
-//更新网络参数
 void MatrixBackPropagation(int w,int h,double *input_matrix,double *output_matrix){
     for(int i=0;i<w;i++)
         for(int j=0;j<h;j++)
             output_matrix[i*h+j]-=lr*input_matrix[i*h+j];
 }
 
-//反向传播时的矩阵乘法
 void MatrixBackPropagationMultiply(int w,int h,double *para,double *grad,double *rgrad){
     for(int i=0;i<w;i++)
         for(int j=0;j<h;j++)
@@ -148,56 +122,38 @@ void MatrixBackPropagationMultiply(int w,int h,double *para,double *grad,double 
 
 }
 
-/* 计算当前层的参数矩阵的梯度,
- * 利用前一层神经元梯度行矩阵乘本层神经元梯度列矩阵,
- * 得到本层参数梯度
- */ 
 void CalculateMatrixGrad(int w,int h,double *input_matrix,double *grad,double *output_matrix){
     for(int i=0;i<w;i++){
-        output_matrix[i]=0;//梯度清空，方便累加
+        output_matrix[i]=0;
         for(int j=0;j<h;j++){
             output_matrix[i]+=input_matrix[i*h+j]*grad[j];
         }
     }
 }
 
-/* 
- * 激活函数的反向传播
- */
 void ReluBackPropagation(int w,double *input_matrix,double *grad,double *output_matrix){
     for(int i=0;i<w;i++)
         if(input_matrix[i]>0) output_matrix[i]=1*grad[i];
         else output_matrix[i]=0.05*grad[i];
 }
 
-/* 反向传播时对梯度进行填充，
- * 由w*h变为(w+2*stride)*(h+2*stride)
- */
 void Padding(int w,int stride,double *input_matrix,double *output_matrix){
     for(int i=0;i<w+2*stride;i++)
         for(int j=0;j<w+2*stride;j++)
-            output_matrix[i*(w+2*stride)+j]=0;//输出矩阵初始化
-//    for(int i=0;i<w;i++)
-//        for(int j=0;j<w;j++)
-//            output_matrix[(i+stride)*(w+2*stride)+(j+stride)]=input_matrix[i*w+j];
+            output_matrix[i*(w+2*stride)+j]=0;
 }
 
-/* 
- * 由于卷积核翻转180°后恰好是导数形式，故进行翻转后与后向传播过来的梯度相乘
- */
 void OverturnKernel(int k,double *input_matrix,double *output_matrix){
     for(int i=0;i<k;i++)
         for(int j=0;j<k;j++)
             output_matrix[(k-1-i)*k+(k-1-j)]=input_matrix[i*k+j];
 }
 
-//释放内存
 void MemoryFree(double *x){
     free(x);
     x=NULL;
 }
 
-//使用随机数初始化网络参数
 void init(struct parameter *para){
     srand(time(NULL));
     for(int i=0;i<3;i++)
@@ -229,15 +185,14 @@ void init(struct parameter *para){
             para->fc_hidden_layer3[i][j]=(rand()/(RAND_MAX+1.0))/10;
 }
 
-//前向传播，包括三层卷积，三层全连接
 void forward(double *input_matrix,struct parameter* para,struct result* data){
     Conv2d(30,30,3,input_matrix,&para->conv_kernel11[0][0],&data->first_conv1[0][0]);
     Conv2d(28,28,3,&data->first_conv1[0][0],&para->conv_kernel21[0][0],&data->sencond_conv1[0][0]);
-    Conv2d(26,26,3,&data->sencond_conv1[0][0],&para->conv_kernel31[0][0],&data->third_conv1[0][0]);//第一个通道得到24*24的特征图
+    Conv2d(26,26,3,&data->sencond_conv1[0][0],&para->conv_kernel31[0][0],&data->third_conv1[0][0]);
 
     Conv2d(30,30,3,input_matrix,&para->conv_kernel12[0][0],&data->first_conv2[0][0]);
     Conv2d(28,28,3,&data->first_conv2[0][0],&para->conv_kernel22[0][0],&data->sencond_conv2[0][0]);
-    Conv2d(26,26,3,&data->sencond_conv2[0][0],&para->conv_kernel32[0][0],&data->third_conv2[0][0]);//第二个通道得到24*24的特征图
+    Conv2d(26,26,3,&data->sencond_conv2[0][0],&para->conv_kernel32[0][0],&data->third_conv2[0][0]);
 
     MatrixExtensionImproved(24,24,&data->third_conv1[0][0],&data->third_conv2[0][0],&data->flatten_conv[0][0]);
     MatrixMultiply(1,1152,180,&data->flatten_conv[0][0],&para->fc_hidden_layer1[0][0],&data->first_fc[0][0]);
@@ -256,22 +211,14 @@ void forward(double *input_matrix,struct parameter* para,struct result* data){
     return;
 }
 
-//反向传播，更新梯度
 void backward(int label,struct parameter* para,struct result* data){
-    /****************************************************************************************
-     * grad结尾的变量代表每一层的梯度
-     * wgrad结尾的变量代表每一层的参数的梯度
-     * rgrad结尾的代表激活函数的梯度
-     * 本网络结构是两个通道的卷积加三层全连接，每个通道有三层卷积层，无池化层，层数使用序数词标明
-    ****************************************************************************************/
     int double_len=sizeof(double);
     double *out_grad;
-    out_grad=(double*)malloc(10*double_len);//网络的输出是10个double类型
-    //交叉熵损失函数求导结果为y_hat_i-y_i
+    out_grad=(double*)malloc(10*double_len);
+
     for(int i=0;i<10;i++)
         if(i==label) out_grad[i]=data->result[i]-1;
         else out_grad[i]=data->result[i]-0;
-    //三层全连接层的反向传播
     double *out_wgrad;
     out_wgrad=(double*)malloc(450*double_len);
     MatrixBackPropagationMultiply(45,10,&data->second_relu[0][0],out_grad,out_wgrad);
@@ -301,7 +248,7 @@ void backward(int label,struct parameter* para,struct result* data){
     all_conv_grad=(double*)malloc(1152*double_len);
     CalculateMatrixGrad(1152,180,&para->fc_hidden_layer1[0][0],first_grad,all_conv_grad);
     MemoryFree(first_grad);
-    //通道一
+
     double *third_conv_grad1;
     third_conv_grad1=(double*)malloc(576*double_len);
     double *third_conv_grad2;
@@ -342,7 +289,7 @@ void backward(int label,struct parameter* para,struct result* data){
     first_kernel_grad=(double*)malloc(9*double_len);
     Conv2d(30,30,28,&data->mnist_data[0][0],first_conv_grad,first_kernel_grad);
     MemoryFree(first_conv_grad);
-    //通道二
+    
     double *third_kernel_grad2;
     third_kernel_grad2=(double*)malloc(9*double_len);
     Conv2d(26,26,24,&data->sencond_conv2[0][0],third_conv_grad2,third_kernel_grad2);
@@ -376,20 +323,18 @@ void backward(int label,struct parameter* para,struct result* data){
     first_kernel_grad2=(double*)malloc(9*double_len);
     Conv2d(30,30,28,&data->mnist_data[0][0],first_conv_grad2,first_kernel_grad2);
 
-
-    //通道一更新参数
     MatrixBackPropagation(3,3,first_kernel_grad,&para->conv_kernel11[0][0]);
     MatrixBackPropagation(3,3,second_kernel_grad,&para->conv_kernel21[0][0]);
     MatrixBackPropagation(3,3,third_kernel_grad,&para->conv_kernel31[0][0]);
-    //通道二更新参数
+
     MatrixBackPropagation(3,3,first_kernel_grad2,&para->conv_kernel12[0][0]);
     MatrixBackPropagation(3,3,second_kernel_grad2,&para->conv_kernel22[0][0]);
     MatrixBackPropagation(3,3,third_kernel_grad2,&para->conv_kernel32[0][0]);
-    //全连接层更新参数
+
     MatrixBackPropagation(1152,180,first_wgrad,&para->fc_hidden_layer1[0][0]);
     MatrixBackPropagation(180,45,second_wgrad,&para->fc_hidden_layer2[0][0]);
     MatrixBackPropagation(45,10,out_wgrad,&para->fc_hidden_layer3[0][0]);
-    //清空内存
+
     MemoryFree(first_kernel_grad);
     MemoryFree(second_kernel_grad);
     MemoryFree(third_kernel_grad);
@@ -402,7 +347,6 @@ void backward(int label,struct parameter* para,struct result* data){
     return;
 }
 
-//从图片中提取数据
 int DataLoader() {
     for (int num = 0; num < 10; num++) {
         for (int i = 0; i < SAMPLE_NUM; i++) {
@@ -410,9 +354,9 @@ int DataLoader() {
             int *l = (int *)malloc(sizeof(int) * 960);
             if (e == NULL || l == NULL) {
                 printf("内存分配失败！\n");
-                free(e); // 释放已分配的内存
+                free(e); 
                 free(l);
-                return 1; // 提前退出
+                return 1;
             }
 
             char route_name[50] = "Training_set/";
@@ -470,7 +414,6 @@ int DataLoader() {
     return 0;
 }
 
-//训练前读取网络参数
 int read_file(struct parameter* parameter4){
     FILE*fp;
     fp=fopen("Training_set/Network_parameter.bin","rb");
@@ -489,7 +432,6 @@ int read_file(struct parameter* parameter4){
     return 0;
 }
 
-//训练结束后保存网络参数
 void printf_file(struct parameter* parameter4){
     FILE*fp;
     fp=fopen("Training_set//Network_parameter.bin","wb");//采用二进制格式保存参数，便于读取
@@ -503,7 +445,6 @@ void printf_file(struct parameter* parameter4){
     return;
 }
 
-//训练过程中的最优参数打印函数
 void printf_file2(struct parameter* parameter4){
     FILE*fp;
     fp=fopen("NetworkParameters.bin","wb");
@@ -517,21 +458,15 @@ void printf_file2(struct parameter* parameter4){
     return;
 };
 
-//交叉熵损失函数
 double Cross_entropy(double *a,int m){
     double u=0;
     u=(-log10(a[m]));
     return u;
 }
 
-/* 函数名：train
- * 功能:网络训练部分，读取到图像数据进行前向传播的训练
- * 参数：epochs-训练次数，para-网络参数，data-中间结果
- * 返回值：无
- */
 void train(int epochs,struct parameter *para,struct result *data){
     printf("\t进入train函数\n");
-    double corss_loss=2;//保存每次训练的最大交叉熵
+    double corss_loss=2;
     for(int epoch=0;epoch<epochs;epoch++){
         lr=pow((corss_loss/10),1.7);
         if(lr>0.01) lr=0.01;
@@ -575,7 +510,6 @@ void train(int epochs,struct parameter *para,struct result *data){
     return;
 }
 
-//用测试集中的样本测试网络，一共有十个测试样本
 void test_network(struct parameter* parameter2,struct result *data2){
     char e[120];
     int l[960];
@@ -653,7 +587,6 @@ return ;
 }
 
 int main(){
-    // 读取训练集
     int h=DataLoader();
     if(h==0)printf("训练数据读取成功\n");
     else if(h==1){
@@ -661,14 +594,12 @@ int main(){
         return 0;
     }
 
-    // 开始训练网络
     printf("开始训练网络\n");
     struct parameter *storage;//定义存放网络参数的结构体
     (storage) = (struct parameter*)malloc(sizeof(struct parameter));//动态分配空间
     struct result *data;
     (data) = (struct result*)malloc(sizeof(struct result));
 
-    // 读取网络参数
     char g;
     do {
         printf("请问您是否希望从已训练的网络参数文件中读取网络参数？(是请按y，否请按n): ");
