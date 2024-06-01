@@ -26,3 +26,7 @@
         进入train函数
 训练进度: 100.000000%  交叉熵损失: 0.077078  学习率:0.0002557282
 ```
+
+# 演示
+https://github.com/IammyselfYBX/Handwritten-digit-recognition-based-on-CNN/assets/56785746/2f545cbf-ce66-45ed-b5eb-db71066e79de
+
