@@ -1,7 +1,7 @@
 /*****************************************************************************
 File name: Handwritten-digit-recognition
 Description: CNN手写数字识别
-Author: 贾继伟
+Author: 甄继伟
 Version: 1.1
 Date: 1999年13月32日 
 *****************************************************************************/
@@ -434,7 +434,7 @@ int read_file(struct parameter* parameter4){
 
 void printf_file(struct parameter* parameter4){
     FILE*fp;
-    fp=fopen("Training_set//Network_parameter.bin","wb");//采用二进制格式保存参数，便于读取
+    fp=fopen("Training_set//Network_parameter.bin","wb");
     struct parameter* parameter1;
     parameter1=(struct parameter*)malloc(sizeof(struct parameter));
     (*parameter1)=(*parameter4);
@@ -451,7 +451,7 @@ void printf_file2(struct parameter* parameter4){
     struct parameter* parameter1;
     parameter1=(struct parameter*)malloc(sizeof(struct parameter));
     (*parameter1)=(*parameter4);
-    fwrite(parameter1,sizeof(struct parameter),1,fp);//结果指针、大小、数量、文件指针
+    fwrite(parameter1,sizeof(struct parameter),1,fp);
     fclose(fp);
     free(parameter1);
     parameter1=NULL;
@@ -473,13 +473,13 @@ void train(int epochs,struct parameter *para,struct result *data){
         if((epoch+1)%10==0){
             printf("训练进度: %lf",100*((double)(epoch+1)/(double)epochs));
             printf("%%  交叉熵损失: %lf  学习率:%.10lf\n",corss_loss,lr);
-            if(lr<0.0000000001)printf_file2(para);//如果找到局部最优则打印网络参数
+            if(lr<0.0000000001)printf_file2(para);
         }
 
         int a,b;
         srand(time(NULL));
         for(int q=0;q<300;q++){
-            a=(int)((rand()/(RAND_MAX+1.0))*300);//确定本轮随机交换的变量下标
+            a=(int)((rand()/(RAND_MAX+1.0))*300);
             b=(int)((rand()/(RAND_MAX+1.0))*300);
             if(a>=0&&a<300&&(a!=b)&&b>=0&&b<300){
                 struct sample* sample5;
@@ -492,7 +492,7 @@ void train(int epochs,struct parameter *para,struct result *data){
             }
             else continue;
         }
-        for(int i=0;i<SAMPLE_NUM*10;i++) {//训练已经打乱的所有样本
+        for(int i=0;i<SAMPLE_NUM*10;i++) {
             corss_loss=0;
             struct sample* sample3;
             sample3=(struct sample *)malloc(sizeof(struct sample));
@@ -502,7 +502,7 @@ void train(int epochs,struct parameter *para,struct result *data){
             backward(y,para,data);
             free(sample3);
             sample3=NULL;
-            double g=Cross_entropy(&data->result[0],y);//计算本轮最大交叉熵损失，用于指导调整学习率
+            double g=Cross_entropy(&data->result[0],y);
             if(g>corss_loss)corss_loss=g;
         }
     }
@@ -564,7 +564,7 @@ void test_network(struct parameter* parameter2,struct result *data2){
                 z++;
             }
         }
-        forward(&data[0][0],parameter2,data2);//把获取的样本数据正向传播一次
+        forward(&data[0][0],parameter2,data2);
         double sum=0;
         int k=0;
         for(int j=0;j<10;j++)
@@ -572,12 +572,12 @@ void test_network(struct parameter* parameter2,struct result *data2){
                 if(result[j]>sum)
                 {
                     sum=result[j];
-                    k=j;//获取分类结果
+                    k=j;
                 }
                 else continue;
             }
         printf("\n");
-        for(int i=0;i<10;i++)//打印分类结果
+        for(int i=0;i<10;i++)
         {
             printf("预测值是%d的概率：%lf\n",i,result[i]);
         }
@@ -595,8 +595,8 @@ int main(){
     }
 
     printf("开始训练网络\n");
-    struct parameter *storage;//定义存放网络参数的结构体
-    (storage) = (struct parameter*)malloc(sizeof(struct parameter));//动态分配空间
+    struct parameter *storage;
+    (storage) = (struct parameter*)malloc(sizeof(struct parameter));
     struct result *data;
     (data) = (struct result*)malloc(sizeof(struct result));
 
@@ -605,7 +605,7 @@ int main(){
         printf("请问您是否希望从已训练的网络参数文件中读取网络参数？(是请按y，否请按n): ");
         setbuf(stdin,NULL);//清空键盘缓冲区
         g=getchar();
-        while(getchar() != '\n'); // 清空输入缓冲区
+        while(getchar() != '\n'); 
         if(g=='y'){
             int h=read_file(storage);
             if(h==1){
@@ -639,10 +639,10 @@ int main(){
             printf("继续训练请按回车，退出请按q: ");
             setbuf(stdin,NULL);
             v=getchar();
-            while(getchar() != '\n'); // 清空输入缓冲区
+            while(getchar() != '\n'); 
             if(v=='q'){
                 printf_file(storage);
-                return 0;//退出则在退出之前保存网络参数
+                return 0;
             }else if (v=='\n') {
                 break;
             }else {
